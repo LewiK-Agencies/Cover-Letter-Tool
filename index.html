@@ -1,349 +1,259 @@
-<script type="text/javascript">
-        var gk_isXlsx = false;
-        var gk_xlsxFileLookup = {};
-        var gk_fileData = {};
-        function filledCell(cell) {
-          return cell !== '' && cell != null;
-        }
-        function loadFileData(filename) {
-        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
-            try {
-                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
-                var firstSheetName = workbook.SheetNames[0];
-                var worksheet = workbook.Sheets[firstSheetName];
-
-                // Convert sheet to JSON to filter blank rows
-                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
-                // Filter out blank rows (rows where all cells are empty, null, or undefined)
-                var filteredData = jsonData.filter(row => row.some(filledCell));
-
-                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
-                var headerRowIndex = filteredData.findIndex((row, index) =>
-                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
-                );
-                // Fallback
-                if (headerRowIndex === -1 || headerRowIndex > 25) {
-                  headerRowIndex = 0;
-                }
-
-                // Convert filtered JSON back to CSV
-                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
-                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
-                return csv;
-            } catch (e) {
-                console.error(e);
-                return "";
-            }
-        }
-        return gk_fileData[filename] || "";
-        }
-        </script><!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Cover Letter Generator - DailyJobs.co.ke</title>
+    <title>AI Cover Letter Generator - Daily Jobs</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-        .blurred { filter: blur(4px); pointer-events: none; user-select: none; }
-        .page { display: none; }
-        .page.active { display: block; }
-        .contact-details { color: #1e40af; text-decoration: underline; }
-        .form-section { margin-bottom: 1.5rem; }
-        .entry { border: 1px solid #e5e7eb; padding: 1rem; border-radius: 0.375rem; margin-bottom: 1rem; }
-        .btn-add { background-color: #10b981; }
-        .btn-delete { background-color: #ef4444; }
+        body { font-family: 'Poppins', sans-serif; }
+        .progress-bar { transition: width 0.5s ease-in-out; }
+        .input-field { transition: border-color 0.3s ease, box-shadow 0.3s ease; }
+        .input-field:focus { border-color: #00A651; box-shadow: 0 0 0 3px rgba(0, 166, 81, 0.1); }
+        .add-btn { transition: color 0.3s ease; }
+        .add-btn:hover { color: #008c44; }
+        .delete-btn { transition: background-color 0.3s ease; }
+        .delete-btn:hover { background-color: #ef4444; }
+        .menu-hover:hover { background-color: #f3f4f6; border-radius: 4px; }
     </style>
 </head>
-<body class="bg-gray-50 font-sans">
-    <div class="container mx-auto p-4 sm:p-6 max-w-3xl">
-        <!-- Page 1: Information Input -->
-        <div id="infoPage" class="page active">
-            <h1 class="text-2xl sm:text-4xl font-bold text-center mb-6 text-gray-800">Create Your Cover Letter</h1>
-            <form id="coverLetterForm" class="bg-white p-4 sm:p-8 rounded-lg shadow-lg">
-                <div class="form-section">
-                    <label class="block text-gray-700 font-medium mb-1 text-sm sm:text-base">Full Name</label>
-                    <input type="text" name="full_name" required class="w-full p-2 border rounded text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-                <div class="form-section">
-                    <label class="block text-gray-700 font-medium mb-1 text-sm sm:text-base">Email Address</label>
-                    <input type="email" name="email" required class="w-full p-2 border rounded text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-                <div class="form-section">
-                    <label class="block text-gray-700 font-medium mb-1 text-sm sm:text-base">Phone Number</label>
-                    <input type="tel" name="phone_number" required class="w-full p-2 border rounded text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-                <div class="form-section">
-                    <label class="block text-gray-700 font-medium mb-1 text-sm sm:text-base">County of Residence</label>
-                    <input type="text" name="county" required class="w-full p-2 border rounded text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-                <div class="form-section">
-                    <label class="block text-gray-700 font-medium mb-1 text-sm sm:text-base">Advertised Job Title</label>
-                    <input type="text" name="advertised_job" required class="w-full p-2 border rounded text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-                <div class="form-section">
-                    <label class="block text-gray-700 font-medium mb-1 text-sm sm:text-base">Company Name</label>
-                    <input type="text" name="company_name" required class="w-full p-2 border rounded text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-                <div class="form-section">
-                    <label class="block text-gray-700 font-medium mb-1 text-sm sm:text-base">Application Address (Optional)</label>
-                    <input type="text" name="application_address" class="w-full p-2 border rounded text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-                <div class="form-section">
-                    <label class="block text-gray-700 font-medium mb-2 text-sm sm:text-base">Work Experience</label>
-                    <div id="workExperienceEntries">
-                        <div class="entry">
-                            <input type="text" name="job_title_0" placeholder="Job Title" required class="w-full p-2 mb-2 border rounded text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <input type="text" name="company_name_0" placeholder="Company Name" required class="w-full p-2 mb-2 border rounded text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <button type="button" class="btn-delete text-white px-3 py-1 rounded hover:bg-red-600 text-sm sm:text-base" onclick="deleteEntry(this)">Delete</button>
-                        </div>
-                    </div>
-                    <button type="button" class="btn-add text-white px-4 py-2 rounded hover:bg-green-600 text-sm sm:text-base" onclick="addWorkExperience()">Add Work Experience</button>
-                </div>
-                <div class="form-section">
-                    <label class="block text-gray-700 font-medium mb-2 text-sm sm:text-base">Education Background</label>
-                    <div id="educationEntries">
-                        <div class="entry">
-                            <input type="text" name="degree_0" placeholder="Degree or Program Name" required class="w-full p-2 mb-2 border rounded text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <input type="text" name="school_0" placeholder="School Name" required class="w-full p-2 mb-2 border rounded text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <button type="button" class="btn-delete text-white px-3 py-1 rounded hover:bg-red-600 text-sm sm:text-base" onclick="deleteEntry(this)">Delete</button>
-                        </div>
-                    </div>
-                    <button type="button" class="btn-add text-white px-4 py-2 rounded hover:bg-green-600 text-sm sm:text-base" onclick="addEducation()">Add Education</button>
-                </div>
-                <div class="form-section">
-                    <label class="block text-gray-700 font-medium mb-2 text-sm sm:text-base">Skills/Competence</label>
-                    <div id="skillsEntries">
-                        <div class="entry">
-                            <input type="text" name="skill_0" placeholder="Skill" required class="w-full p-2 mb-2 border rounded text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <button type="button" class="btn-delete text-white px-3 py-1 rounded hover:bg-red-600 text-sm sm:text-base" onclick="deleteEntry(this)">Delete</button>
-                        </div>
-                    </div>
-                    <button type="button" class="btn-add text-white px-4 py-2 rounded hover:bg-green-600 text-sm sm:text-base" onclick="addSkill()">Add Skill</button>
-                </div>
-                <button type="submit" class="w-full bg-blue-600 text-white p-3 rounded hover:bg-blue-700 mt-4 text-sm sm:text-base">Generate Preview</button>
-            </form>
+<body class="bg-gray-100">
+    <nav class="bg-white shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <a href="index.html" class="text-2xl font-bold text-gray-800 flex items-center">
+                <span class="text-green-600">Daily</span><span class="text-blue-600">Jobs</span>
+            </a>
+            <div class="space-x-6 flex items-center">
+                <a href="cover-letter-generator.html" class="menu-hover text-gray-700 font-semibold px-3 py-2 hover:text-green-600 transition duration-200">Application Letter</a>
+                <a href="ats-checker.html" class="menu-hover text-gray-700 font-semibold px-3 py-2 hover:text-green-600 transition duration-200">ATS Checker</a>
+                <a href="https://dailyjobs.co.ke/" class="menu-hover text-gray-700 font-semibold px-3 py-2 hover:text-green-600 transition duration-200">Explore Jobs</a>
+                <button id="mobileMenuBtn" class="lg:hidden text-gray-700 focus:outline-none">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"/>
+                    </svg>
+                </button>
+            </div>
         </div>
-
-        <!-- Page 2: Preview -->
-        <div id="previewPage" class="page">
-            <h2 class="text-xl sm:text-3xl font-semibold text-center mb-6 text-gray-800">Cover Letter Preview</h2>
-            <div id="coverLetterPreview" class="bg-white p-4 sm:p-8 rounded-lg shadow-lg blurred text-sm sm:text-base"></div>
-            <p class="text-center mt-6 text-gray-600 text-sm sm:text-base">Pay Ksh 36 via M-PESA to unlock and download your personalized cover letter in PDF format.</p>
-            <a href="https://short.payhero.co.ke/s/38zdbNzKeiv7JiLQZawwmB" target="_blank" id="payButton" class="block w-full max-w-xs mx-auto bg-blue-600 text-white p-3 rounded hover:bg-blue-700 text-center mt-4 text-sm sm:text-base">Pay Now</a>
-            <p id="paymentMessage" class="text-red-600 text-center mt-2 hidden text-sm sm:text-base">Payment failed. Please try again.</p>
-            <button onclick="goBackToInfo()" class="block w-full max-w-xs mx-auto bg-gray-600 text-white p-3 rounded hover:bg-gray-700 text-center mt-4 text-sm sm:text-base">Edit Information</button>
+        <div id="mobileMenu" class="lg:hidden bg-white shadow-md px-4 py-2 space-y-2 hidden">
+            <a href="cover-letter-generator.html" class="block text-gray-700 font-semibold hover:text-green-600">Application Letter</a>
+            <a href="ats-checker.html" class="block text-gray-700 font-semibold hover:text-green-600">ATS Checker</a>
+            <a href="https://dailyjobs.co.ke/" class="block text-gray-700 font-semibold hover:text-green-600">Explore Jobs</a>
         </div>
-    </div>
+    </nav>
 
+    <section class="py-12">
+        <div class="container mx-auto px-4">
+            <h1 class="text-4xl font-bold text-center text-gray-800 mb-8" data-aos="fade-up">Craft Your Perfect Cover Letter</h1>
+
+            <div class="w-full bg-gray-200 rounded-full h-2.5 mb-8" data-aos="fade-up">
+                <div id="progressBar" class="progress-bar bg-green-600 h-2.5 rounded-full" style="width: 0%"></div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="bg-white p-6 rounded-lg shadow-lg" data-aos="fade-right">
+                    <form id="coverLetterForm" class="space-y-6">
+                        <div>
+                            <label for="fullName" class="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                            <input type="text" id="fullName" class="input-field block w-full p-3 border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-green-500 sm:text-sm" placeholder="e.g., John Doe" required>
+                        </div>
+                        <div>
+                            <label for="email" class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                            <input type="email" id="email" class="input-field block w-full p-3 border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-green-500 sm:text-sm" placeholder="e.g., john.doe@email.com" required>
+                        </div>
+                        <div>
+                            <label for="phone" class="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                            <input type="tel" id="phone" class="input-field block w-full p-3 border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-green-500 sm:text-sm" placeholder="e.g., 0712345678" pattern="^07\d{8}$" required>
+                        </div>
+                        <div>
+                            <label for="county" class="block text-sm font-medium text-gray-700 mb-2">County of Residence</label>
+                            <input type="text" id="county" class="input-field block w-full p-3 border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-green-500 sm:text-sm" placeholder="e.g., Nairobi" required>
+                        </div>
+                        <div>
+                            <label for="jobTitle" class="block text-sm font-medium text-gray-700 mb-2">Advertised Job Title</label>
+                            <input type="text" id="jobTitle" class="input-field block w-full p-3 border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-green-500 sm:text-sm" placeholder="e.g., Software Engineer" required>
+                        </div>
+                        <div>
+                            <label for="companyName" class="block text-sm font-medium text-gray-700 mb-2">Company Name</label>
+                            <input type="text" id="companyName" class="input-field block w-full p-3 border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-green-500 sm:text-sm" placeholder="e.g., Tech Innovations Ltd" required>
+                        </div>
+                        <div>
+                            <label for="applicationAddress" class="block text-sm font-medium text-gray-700 mb-2">Application Address (Optional)</label>
+                            <input type="text" id="applicationAddress" class="input-field block w-full p-3 border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-green-500 sm:text-sm" placeholder="e.g., The HR Manager">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Work Experience</label>
+                            <div id="workExperienceContainer" class="space-y-4">
+                                <div class="work-experience-entry flex items-center space-x-3">
+                                    <input type="text" class="input-field block w-full p-3 border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-green-500 sm:text-sm" placeholder="e.g., Software Developer at ABC Corp" data-type="company" required>
+                                    <button type="button" class="delete-btn bg-red-500 text-white px-3 py-1.5 rounded text-sm hover:bg-red-600">Delete</button>
+                                </div>
+                            </div>
+                            <button type="button" id="addWorkExperience" class="add-btn text-green-600 mt-4 text-sm font-medium hover:underline">+ Add Work Experience</button>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Education Background</label>
+                            <div id="educationContainer" class="space-y-4">
+                                <div class="education-entry flex items-center space-x-3">
+                                    <input type="text" class="input-field block w-full p-3 border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-green-500 sm:text-sm" placeholder="e.g., B.Sc. Computer Science at University of Nairobi" data-type="school" required>
+                                    <button type="button" class="delete-btn bg-red-500 text-white px-3 py-1.5 rounded text-sm hover:bg-red-600">Delete</button>
+                                </div>
+                            </div>
+                            <button type="button" id="addEducation" class="add-btn text-green-600 mt-4 text-sm font-medium hover:underline">+ Add Education</button>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Skills/Competence</label>
+                            <div id="skillsContainer" class="space-y-4">
+                                <div class="skill-entry flex items-center space-x-3">
+                                    <input type="text" class="input-field block w-full p-3 border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-green-500 sm:text-sm" placeholder="e.g., JavaScript, Project Management" required>
+                                    <button type="button" class="delete-btn bg-red-500 text-white px-3 py-1.5 rounded text-sm hover:bg-red-600">Delete</button>
+                                </div>
+                            </div>
+                            <button type="button" id="addSkill" class="add-btn text-green-600 mt-4 text-sm font-medium hover:underline">+ Add Skill</button>
+                        </div>
+                        <button type="submit" class="w-full bg-green-600 text-white p-3 rounded-lg shadow-md hover:bg-green-700 text-sm sm:text-base transition duration-200">Generate Preview</button>
+                    </form>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow-lg hidden" data-aos="fade-left">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Cover Letter Preview</h2>
+                    <div id="preview" class="border border-gray-200 p-4 rounded-lg h-96 overflow-y-auto text-gray-700 bg-gray-50"></div>
+                    <div id="paymentSection" class="payment-banner text-white p-6 rounded-lg mt-6 text-center hidden">
+                        <p class="mb-4 text-lg">Pay Ksh 36 via M-PESA to unlock and download your personalized cover letter in PDF format.</p>
+                        <button id="payNowBtn" class="bg-white text-green-600 font-semibold py-2 px-6 rounded-lg shadow-md hover:bg-gray-100 transition duration-200">Pay Now</button>
+                        <p id="paymentError" class="text-red-300 mt-2 hidden">Payment failed. Please try again.</p>
+                    </div>
+                    <button id="editBtn" class="w-full bg-gray-600 text-white p-3 rounded-lg shadow-md mt-4 hover:bg-gray-700 text-sm sm:text-base transition duration-200">Edit Information</button>
+                    <a href="cover_letter_download (3).html" id="downloadBtn" class="w-full bg-blue-600 text-white p-3 rounded-lg shadow-md mt-4 hover:bg-blue-700 text-sm sm:text-base transition duration-200 hidden">Download Cover Letter</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
     <script>
-        let coverLetterContent = '';
-        let formData = {};
-        let workExperienceCount = 1;
-        let educationCount = 1;
-        let skillCount = 1;
+        AOS.init({ duration: 1000 });
 
-        // Load saved data from localStorage
-        function loadSavedData() {
-            const saved = localStorage.getItem('coverLetterData');
-            if (saved) {
-                formData = JSON.parse(saved);
-                Object.keys(formData).forEach(key => {
-                    if (key !== 'cover_letter' && key !== 'work_experience' && key !== 'education' && key !== 'skills') {
-                        const input = document.querySelector(`[name="${key}"]`);
-                        if (input) input.value = formData[key];
-                    }
-                });
-                if (formData.work_experience) {
-                    document.getElementById('workExperienceEntries').innerHTML = '';
-                    formData.work_experience.forEach((exp, i) => {
-                        addWorkExperience(exp.job_title, exp.company_name, i);
-                    });
-                    workExperienceCount = formData.work_experience.length;
-                }
-                if (formData.education) {
-                    document.getElementById('educationEntries').innerHTML = '';
-                    formData.education.forEach((edu, i) => {
-                        addEducation(edu.degree, edu.school, i);
-                    });
-                    educationCount = formData.education.length;
-                }
-                if (formData.skills) {
-                    document.getElementById('skillsEntries').innerHTML = '';
-                    formData.skills.forEach((skill, i) => {
-                        addSkill(skill, i);
-                    });
-                    skillCount = formData.skills.length;
-                }
-                coverLetterContent = formData.cover_letter || '';
-                if (coverLetterContent) {
-                    document.getElementById('coverLetterPreview').textContent = coverLetterContent;
-                    showPage('previewPage');
-                }
-            }
-        }
+        const form = document.getElementById('coverLetterForm');
+        const previewDiv = document.getElementById('preview');
+        const paymentSection = document.getElementById('paymentSection');
+        const editBtn = document.getElementById('editBtn');
+        const progressBar = document.getElementById('progressBar');
+        const payNowBtn = document.getElementById('payNowBtn');
+        const paymentError = document.getElementById('paymentError');
+        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+        const mobileMenu = document.getElementById('mobileMenu');
+        const downloadBtn = document.getElementById('downloadBtn');
 
-        // Save form data to localStorage
-        function saveFormData() {
-            const form = document.getElementById('coverLetterForm');
-            const data = new FormData(form);
-            formData = Object.fromEntries(data);
-            formData.work_experience = [];
-            for (let i = 0; i < workExperienceCount; i++) {
-                if (data.get(`job_title_${i}`)) {
-                    formData.work_experience.push({
-                        job_title: data.get(`job_title_${i}`),
-                        company_name: data.get(`company_name_${i}`)
-                    });
-                }
-            }
-            formData.education = [];
-            for (let i = 0; i < educationCount; i++) {
-                if (data.get(`degree_${i}`)) {
-                    formData.education.push({
-                        degree: data.get(`degree_${i}`),
-                        school: data.get(`school_${i}`)
-                    });
-                }
-            }
-            formData.skills = [];
-            for (let i = 0; i < skillCount; i++) {
-                if (data.get(`skill_${i}`)) {
-                    formData.skills.push(data.get(`skill_${i}`));
-                }
-            }
-            formData.cover_letter = coverLetterContent;
-            localStorage.setItem('coverLetterData', JSON.stringify(formData));
-        }
+        const addWorkExperienceBtn = document.getElementById('addWorkExperience');
+        const workExperienceContainer = document.getElementById('workExperienceContainer');
+        const addEducationBtn = document.getElementById('addEducation');
+        const educationContainer = document.getElementById('educationContainer');
+        const addSkillBtn = document.getElementById('addSkill');
+        const skillsContainer = document.getElementById('skillsContainer');
 
-        // Add work experience entry
-        function addWorkExperience(jobTitle = '', companyName = '', index = workExperienceCount) {
-            const div = document.createElement('div');
-            div.className = 'entry';
-            div.innerHTML = `
-                <input type="text" name="job_title_${index}" placeholder="Job Title" value="${jobTitle}" required class="w-full p-2 mb-2 border rounded text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <input type="text" name="company_name_${index}" placeholder="Company Name" value="${companyName}" required class="w-full p-2 mb-2 border rounded text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <button type="button" class="btn-delete text-white px-3 py-1 rounded hover:bg-red-600 text-sm sm:text-base" onclick="deleteEntry(this)">Delete</button>
+        let progress = 0;
+        const totalFields = 8;
+
+        const addEntry = (container, placeholder, dataType) => {
+            const entry = document.createElement('div');
+            entry.className = `flex items-center space-x-3 ${dataType === 'company' ? 'work-experience-entry' : dataType === 'school' ? 'education-entry' : 'skill-entry'}`;
+            entry.innerHTML = `
+                <input type="text" class="input-field block w-full p-3 border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-green-500 sm:text-sm" placeholder="${placeholder}" data-type="${dataType}" required>
+                <button type="button" class="delete-btn bg-red-500 text-white px-3 py-1.5 rounded text-sm hover:bg-red-600">Delete</button>
             `;
-            document.getElementById('workExperienceEntries').appendChild(div);
-            workExperienceCount++;
-        }
+            container.appendChild(entry);
+            entry.querySelector('.delete-btn').addEventListener('click', () => {
+                container.removeChild(entry);
+                updateProgress();
+            });
+            updateProgress();
+        };
 
-        // Add education entry
-        function addEducation(degree = '', school = '', index = educationCount) {
-            const div = document.createElement('div');
-            div.className = 'entry';
-            div.innerHTML = `
-                <input type="text" name="degree_${index}" placeholder="Degree or Program Name" value="${degree}" required class="w-full p-2 mb-2 border rounded text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <input type="text" name="school_${index}" placeholder="School Name" value="${school}" required class="w-full p-2 mb-2 border rounded text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <button type="button" class="btn-delete text-white px-3 py-1 rounded hover:bg-red-600 text-sm sm:text-base" onclick="deleteEntry(this)">Delete</button>
-            `;
-            document.getElementById('educationEntries').appendChild(div);
-            educationCount++;
-        }
+        addWorkExperienceBtn.addEventListener('click', () => addEntry(workExperienceContainer, 'e.g., Software Developer at ABC Corp', 'company'));
+        addEducationBtn.addEventListener('click', () => addEntry(educationContainer, 'e.g., B.Sc. Computer Science at University of Nairobi', 'school'));
+        addSkillBtn.addEventListener('click', () => addEntry(skillsContainer, 'e.g., JavaScript, Project Management', 'skill'));
 
-        // Add skill entry
-        function addSkill(skill = '', index = skillCount) {
-            const div = document.createElement('div');
-            div.className = 'entry';
-            div.innerHTML = `
-                <input type="text" name="skill_${index}" placeholder="Skill" value="${skill}" required class="w-full p-2 mb-2 border rounded text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <button type="button" class="btn-delete text-white px-3 py-1 rounded hover:bg-red-600 text-sm sm:text-base" onclick="deleteEntry(this)">Delete</button>
-            `;
-            document.getElementById('skillsEntries').appendChild(div);
-            skillCount++;
-        }
-
-        // Delete entry
-        function deleteEntry(button) {
-            button.parentElement.remove();
-        }
-
-        // Navigate pages
-        function showPage(pageId) {
-            document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
-            document.getElementById(pageId).classList.add('active');
-        }
-
-        // Go back to info page
-        function goBackToInfo() {
-            showPage('infoPage');
-        }
-
-        // Form submission
-        document.getElementById('coverLetterForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            coverLetterContent = await generateCoverLetter();
-            saveFormData();
-            document.getElementById('coverLetterPreview').textContent = coverLetterContent;
-            showPage('previewPage');
-        });
+        const updateProgress = () => {
+            progress = 0;
+            const fields = ['fullName', 'email', 'phone', 'county', 'jobTitle', 'companyName'];
+            fields.forEach(id => {
+                if (document.getElementById(id).value.trim()) progress++;
+            });
+            if (workExperienceContainer.children.length > 0) progress++;
+            if (educationContainer.children.length > 0) progress++;
+            if (skillsContainer.children.length > 0) progress++;
+            progressBar.style.width = `${(progress / totalFields) * 100}%`;
+        };
 
         async function generateCoverLetter() {
-            const form = document.getElementById('coverLetterForm');
-            const data = new FormData(form);
-            const tempData = Object.fromEntries(data);
-            const workExperience = [];
-            for (let i = 0; i < workExperienceCount; i++) {
-                if (data.get(`job_title_${i}`)) {
-                    workExperience.push({
-                        job_title: data.get(`job_title_${i}`),
-                        company_name: data.get(`company_name_${i}`)
-                    });
-                }
+            const tempData = {
+                full_name: document.getElementById('fullName').value,
+                email: document.getElementById('email').value,
+                phone_number: document.getElementById('phone').value,
+                county: document.getElementById('county').value,
+                advertised_job: document.getElementById('jobTitle').value,
+                company_name: document.getElementById('companyName').value
+            };
+
+            const workExperience = Array.from(workExperienceContainer.children).map(child => ({
+                job_title: child.querySelector('input').value.split(' at ')[0] || child.querySelector('input').value,
+                company_name: child.querySelector('input').value.split(' at ')[1] || ''
+            }));
+            const education = Array.from(educationContainer.children).map(child => ({
+                degree: child.querySelector('input').value.split(' at ')[0] || child.querySelector('input').value,
+                school: child.querySelector('input').value.split(' at ')[1] || ''
+            }));
+            const skills = Array.from(skillsContainer.children).map(child => child.querySelector('input').value);
+
+            const response = await fetch('https://cover-letter-server.onrender.com', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    full_name: tempData.full_name,
+                    email: tempData.email,
+                    phone_number: tempData.phone_number,
+                    county: tempData.county,
+                    advertised_job: tempData.advertised_job,
+                    company_name: tempData.company_name,
+                    work_experience: workExperience,
+                    education: education,
+                    skills: skills
+                })
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                return result.letter;
+            } else {
+                alert('Error generating cover letter');
+                return 'Error generating cover letter. Please try again or contact support.';
             }
-            const education = [];
-            for (let i = 0; i < educationCount; i++) {
-                if (data.get(`degree_${i}`)) {
-                    education.push({
-                        degree: data.get(`degree_${i}`),
-                        school: data.get(`school_${i}`)
-                    });
-                }
-            }
-            const skills = [];
-            for (let i = 0; i < skillCount; i++) {
-                if (data.get(`skill_${i}`)) {
-                    skills.push(data.get(`skill_${i}`));
-                }
-            }
-            const workExpText = workExperience.map(exp => `${exp.job_title} at ${exp.company_name}`).join('; ');
-            const eduText = education.map(edu => `${edu.degree} from ${edu.school}`).join('; ');
-            const skillsText = skills.join(', ');
-            return `
-Tel: ${tempData.phone_number} | E-Mail: ${tempData.email}
-${tempData.full_name}
-${tempData.county}, Kenya
-${tempData.phone_number}
-${tempData.email}
-
-The Human Resource Manager
-${tempData.company_name}
-
-${new Date().toLocaleDateString()}
-
-Dear Sir/Madam,
-
-RE: APPLICATION FOR ${tempData.advertised_job.toUpperCase()} POSITION
-
-I am excited to apply for the ${tempData.advertised_job} position at ${tempData.company_name}. With my professional experience as ${workExpText}, I am well-prepared to contribute to your organization's success.
-
-My educational background includes ${eduText}, providing me with a strong foundation to excel in this role. Additionally, I possess key skills such as ${skillsText}, which enable me to deliver results and adapt to dynamic work environments.
-
-I am drawn to ${tempData.company_name} because of its reputation for excellence and innovation. I am eager to bring my expertise, professionalism, and commitment to your team, driving positive outcomes.
-
-Thank you for considering my application. I am available for an interview at your earliest convenience and look forward to discussing how I can contribute to ${tempData.company_name}.
-
-Yours sincerely,
-
-${tempData.full_name}
-
-Tel: ${tempData.phone_number} | E-Mail: ${tempData.email}
-            `.trim();
         }
 
-        // Initialize
-        loadSavedData();
+        form.addEventListener('input', updateProgress);
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const coverLetterContent = await generateCoverLetter();
+            previewDiv.innerHTML = coverLetterContent.replace(/\n/g, '<br>');
+            previewDiv.closest('div').classList.remove('hidden');
+            paymentSection.classList.remove('hidden');
+            downloadBtn.classList.remove('hidden');
+            localStorage.setItem('coverLetterData', JSON.stringify({ cover_letter: coverLetterContent }));
+        });
+
+        editBtn.addEventListener('click', () => {
+            form.scrollIntoView({ behavior: 'smooth' });
+        });
+
+        payNowBtn.addEventListener('click', () => {
+            window.location.href = 'https://short.payhero.co.ke/s/8a4CrCW8yaSWo62r48uHWx';
+        });
+
+        mobileMenuBtn.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+        });
     </script>
 </body>
 </html>
