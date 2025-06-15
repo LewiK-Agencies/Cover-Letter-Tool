@@ -207,7 +207,7 @@
             }));
             const skills = Array.from(skillsContainer.children).map(child => child.querySelector('input').value);
 
-            const response = await fetch('https://cover-letter-server.onrender.com', {
+            const response = await fetch('https://cover-letter-server.onrender.com/generate-cover-letter', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
